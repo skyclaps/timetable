@@ -58,7 +58,7 @@ input_box.insert(tk.END,
 20:00-21:00 act 4
 21:00-22:00 act 5
 22:00-23:00 act 6
-23:00-24:00 act 7""")
+23:00-25:00 act 7""")
 
 # 右側フレーム（現在時刻）
 right_frame = tk.Frame(top_frame, bg="black")
@@ -74,21 +74,28 @@ canvas = FigureCanvasTkAgg(fig, master=root)
 canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
 
 def parse_text():
+    from datetime import timedelta
     rows = []
     for line in input_box.get("1.0", tk.END).splitlines():
         m = re.match(r"(\d{1,2}:\d{2})-(\d{1,2}:\d{2})\s+(.+)", line)
         if not m:
             continue
         start, end, label = m.groups()
-        # 24:00を00:00として扱い、翌日として処理
-        if end == "24:00":
-            s = datetime.strptime(start, "%H:%M")
-            e = datetime.strptime("00:00", "%H:%M")
-            from datetime import timedelta
-            e += timedelta(days=1)
-        else:
-            s = datetime.strptime(start, "%H:%M")
-            e = datetime.strptime(end, "%H:%M")
+        
+        # 時間表記をパース（25時以上に対応）
+        def parse_time(time_str):
+            parts = time_str.split(":")
+            hours = int(parts[0])
+            minutes = int(parts[1])
+            # 24時以上の場合、base_timeから秒数で表現するため、
+            # datetime + timedeltaを返す
+            base = datetime.strptime("00:00", "%H:%M")
+            total_seconds = hours * 3600 + minutes * 60
+            return base + timedelta(seconds=total_seconds)
+        
+        s = parse_time(start)
+        e = parse_time(end)
+        
         rows.append((s, e, label))
     return rows
 
@@ -98,21 +105,28 @@ def draw():
     if not rows:
         return
 
-    now = datetime.now().replace(
-        year=rows[0][0].year,
-        month=rows[0][0].month,
-        day=rows[0][0].day
-    )
-
-    # 基準時刻（最初のタスク開始時刻）を設定４
+    # 基準時刻（最初のタスク開始時刻）を設定
     base_time = rows[0][0]
+    
+    # 現在時刻を取得して、base_timeと同じ日付にセット
+    now = datetime.now().replace(
+        year=base_time.year,
+        month=base_time.month,
+        day=base_time.day,
+        microsecond=0
+    )
     
     # datetimeを秒単位に変換する関数
     def to_seconds(dt):
         return (dt - base_time).total_seconds()
 
     for i, (s, e, label) in enumerate(rows):
-        duration = (e - s).seconds
+        # 終了時刻が開始時刻より前の場合は翌日として処理
+        if e < s:
+            from datetime import timedelta
+            e = e + timedelta(days=1)
+        
+        duration = (e - s).total_seconds()
         s_sec = to_seconds(s)
         
         active = s <= now <= e
@@ -162,7 +176,7 @@ def draw():
     ax.tick_params(colors="white")
     
     # 右側のラベルに現在時刻を表示
-    current_time_str = now.strftime("%H:%M:%S")
+    current_time_str = datetime.now().strftime("%H:%M:%S")
     time_label.config(text=current_time_str)
 
     canvas.draw()

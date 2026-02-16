@@ -56,7 +56,8 @@ input_box.insert(tk.END,
 18:30-19:00 act 2
 19:00-20:00 act 3
 20:00-21:00 act 4
-21:00-22:00 act 5""")
+21:00-22:00 act 5
+22:00-23:00 act 6""")
 
 # 右側フレーム（現在時刻）
 right_frame = tk.Frame(top_frame, bg="black")

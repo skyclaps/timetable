@@ -57,7 +57,8 @@ input_box.insert(tk.END,
 19:00-20:00 act 3
 20:00-21:00 act 4
 21:00-22:00 act 5
-22:00-23:00 act 6""")
+22:00-23:00 act 6
+23:00-24:00 act 7""")
 
 # 右側フレーム（現在時刻）
 right_frame = tk.Frame(top_frame, bg="black")
@@ -79,8 +80,15 @@ def parse_text():
         if not m:
             continue
         start, end, label = m.groups()
-        s = datetime.strptime(start, "%H:%M")
-        e = datetime.strptime(end, "%H:%M")
+        # 24:00を00:00として扱い、翌日として処理
+        if end == "24:00":
+            s = datetime.strptime(start, "%H:%M")
+            e = datetime.strptime("00:00", "%H:%M")
+            from datetime import timedelta
+            e += timedelta(days=1)
+        else:
+            s = datetime.strptime(start, "%H:%M")
+            e = datetime.strptime(end, "%H:%M")
         rows.append((s, e, label))
     return rows
 
